@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import Peer, { DataConnection } from 'peerjs';
+import type Peer from 'peerjs';
+import type { DataConnection } from 'peerjs';
 import { Message, PeerState, MessageType, Attachment } from '../types';
 import { generateId, blobToBase64, base64ToBlob } from '../utils/ui';
 
@@ -22,16 +23,6 @@ export function useChat() {
       const saved = localStorage.getItem(STORAGE_KEY_MSGS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Hydrate messages (restore Blob URLs)
-        parsed.forEach((msg: Message) => {
-           if (msg.attachment && typeof msg.attachment.data === 'string') {
-               // We need to convert base64 back to Blob URL for display
-               // This is async, so we might see a flicker or we need a better hydration strategy.
-               // For simplicity in synchronous init, we keep data as string temporarily 
-               // and let a useEffect hydrate it, or we rely on the component handling data string.
-               // However, to be cleaner, we won't hydrate sync. We'll let the effect below handle it.
-           }
-        });
         return parsed;
       }
     } catch (e) {
@@ -117,11 +108,11 @@ export function useChat() {
   useEffect(() => {
     const initPeer = async () => {
       try {
-        const { default: Peer } = await import('peerjs');
+        const { default: PeerClass } = await import('peerjs');
         
         // Try to reuse ID
         const savedId = localStorage.getItem(STORAGE_KEY_MY_ID);
-        const peer = savedId ? new Peer(savedId) : new Peer();
+        const peer = savedId ? new PeerClass(savedId) : new PeerClass();
 
         peer.on('open', (id) => {
           console.log('My peer ID is: ' + id);
@@ -170,8 +161,6 @@ export function useChat() {
     conn.on('open', () => {
       localStorage.setItem(STORAGE_KEY_LAST_PEER, conn.peer);
       setPeerState(prev => ({ ...prev, connected: true, peerId: conn.peer }));
-      
-      // Send a sync ping or status if needed
     });
 
     conn.on('data', (data: any) => {
@@ -292,14 +281,10 @@ export function useChat() {
   const clearChat = () => {
       setMessages([]);
       localStorage.removeItem(STORAGE_KEY_MSGS);
-      // We keep the ID but clear the conversation
-      // Optionally clear peer linkage to force fresh connect, 
-      // but user likely just wants to clear the screen/history.
-      // If we want "New Convo" completely:
       localStorage.removeItem(STORAGE_KEY_LAST_PEER);
       setPeerState(prev => ({...prev, connected: false, peerId: null}));
       connRef.current?.close();
-      window.location.reload(); // Hard reset for cleanliness
+      window.location.reload(); 
   };
 
   return {
