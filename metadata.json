@@ -1,0 +1,5 @@
+{
+  "name": "BloomChat P2P",
+  "description": "A serene, serverless peer-to-peer chat application featuring file sharing, image pasting, and message reactions. Secure, private, and beautiful.",
+  "requestFramePermissions": []
+}
