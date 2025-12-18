@@ -282,9 +282,13 @@ export function useChat() {
       setMessages([]);
       localStorage.removeItem(STORAGE_KEY_MSGS);
       localStorage.removeItem(STORAGE_KEY_LAST_PEER);
+      localStorage.removeItem(STORAGE_KEY_MY_ID);
+      
       setPeerState(prev => ({...prev, connected: false, peerId: null}));
       connRef.current?.close();
-      window.location.reload(); 
+      
+      // Reload the page without query parameters to ensure a fresh start
+      window.location.href = window.location.pathname;
   };
 
   return {
