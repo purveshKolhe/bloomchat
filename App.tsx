@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from './hooks/useChat';
 import { MessageBubble } from './components/MessageBubble';
 import { cn, fileToDataUrl } from './utils/ui';
-import { Send, Paperclip, Image as ImageIcon, X, Copy, Check, Moon, Sun, Loader2, Reply } from 'lucide-react';
+import { Send, Paperclip, Image as ImageIcon, X, Copy, Check, Moon, Sun, Loader2, Reply, MessageSquarePlus, Trash2 } from 'lucide-react';
 import { Message } from './types';
 
 export default function App() {
-  const { myId, peerId, connected, loading, error, messages, connectToPeer, sendMessage, addReaction } = useChat();
+  const { myId, peerId, connected, loading, error, messages, connectToPeer, sendMessage, addReaction, clearChat } = useChat();
   const [inputText, setInputText] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -25,8 +25,10 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const joinId = params.get('join');
-    if (joinId && !connected && myId) {
-      connectToPeer(joinId);
+    // Only connect if not already connected and join ID is different from my ID
+    if (joinId && !connected && myId && joinId !== myId) {
+       // Check if we are already connected or trying to connect to the same peer
+       connectToPeer(joinId);
     }
   }, [myId, connected]);
 
@@ -63,8 +65,11 @@ export default function App() {
   }, []);
 
   const handleSend = () => {
-    if ((!inputText.trim() && !fileToUpload) || !connected) return;
-
+    if ((!inputText.trim() && !fileToUpload)) return;
+    
+    // Allow sending to self for notes if not connected, or enforce connection?
+    // User requested "chat app", implies 2 people. But we can let them type while waiting.
+    
     if (fileToUpload) {
         const type = fileToUpload.type.startsWith('image/') ? 'image' : 'file';
         sendMessage(inputText, type, replyTo?.id, fileToUpload);
@@ -108,7 +113,7 @@ export default function App() {
   }
 
   // Connection Screen
-  if (!connected) {
+  if (!connected && messages.length === 0) {
     return (
       <div className="relative min-h-screen flex flex-col items-center justify-center p-6 bg-rose-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-500">
         <MeshBackground />
@@ -180,10 +185,21 @@ export default function App() {
       {/* Header */}
       <header className="relative z-20 flex-none h-16 px-6 flex items-center justify-between bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/20 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-          <span className="font-medium text-slate-700 dark:text-slate-200">Connected with Peer</span>
+          <div className={cn("w-2.5 h-2.5 rounded-full shadow-[0_0_8px]", connected ? "bg-green-500 shadow-green-500/60" : "bg-yellow-500 shadow-yellow-500/60")} />
+          <span className="font-medium text-slate-700 dark:text-slate-200">
+              {connected ? 'Connected with Peer' : 'Waiting for connection...'}
+          </span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+           <button 
+              onClick={clearChat}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors text-sm font-medium"
+              title="New Conversation (Clears History)"
+            >
+              <Trash2 size={16} />
+              <span>New Chat</span>
+            </button>
+           <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
            <button 
               onClick={() => setIsDark(!isDark)}
               className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-600 dark:text-slate-300"
@@ -202,6 +218,8 @@ export default function App() {
                     <p className="text-slate-500 dark:text-slate-400">Say hello to start the bloom.</p>
                 </div>
             )}
+            
+            {/* Render restored messages, even if offline */}
             {messages.map((msg) => (
             <MessageBubble 
                 key={msg.id} 
@@ -293,7 +311,7 @@ export default function App() {
 
             <button 
               onClick={handleSend}
-              disabled={(!inputText.trim() && !fileToUpload) || !connected}
+              disabled={(!inputText.trim() && !fileToUpload)}
               className="p-3 bg-gradient-to-tr from-rose-500 to-pink-600 text-white rounded-2xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-rose-200 dark:shadow-none"
             >
               <Send size={20} />
