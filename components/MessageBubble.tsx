@@ -19,7 +19,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMe, onR
     if (att.type.startsWith('image/')) {
       return (
         <div className="rounded-lg overflow-hidden my-2 max-w-sm border border-black/5 dark:border-white/10">
-          <img src={att.url || (att.data as string)} alt={att.name} className="max-w-full h-auto object-cover" />
+          <img src={att.url || (typeof att.data === 'string' ? att.data : '')} alt={att.name} className="max-w-full h-auto object-cover" />
         </div>
       );
     }
@@ -32,13 +32,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMe, onR
           <p className="font-medium text-sm truncate dark:text-slate-200">{att.name}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{formatBytes(att.size)}</p>
         </div>
-        <a 
-          href={att.url} 
-          download={att.name}
-          className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-slate-600 dark:text-slate-300"
-        >
-          <Download size={18} />
-        </a>
+        {att.url && (
+            <a 
+            href={att.url} 
+            download={att.name}
+            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-slate-600 dark:text-slate-300"
+            >
+            <Download size={18} />
+            </a>
+        )}
       </div>
     );
   };
@@ -51,18 +53,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMe, onR
       )}
       onMouseLeave={() => setShowReactions(false)}
     >
-      {/* Reply Context */}
+      {/* Reply Context - WhatsApp Style */}
       {parentMessage && (
         <div 
           className={cn(
-            "text-xs mb-1 px-2 py-0.5 rounded-md opacity-70 flex items-center gap-1 cursor-pointer hover:opacity-100 transition-opacity",
-            isMe ? "bg-rose-100 text-rose-800 dark:bg-indigo-900/50 dark:text-indigo-200" : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            "mb-1 rounded-md overflow-hidden cursor-pointer border-l-[4px] shadow-sm flex flex-col justify-center p-2 min-w-[120px]",
+            isMe 
+                ? "bg-rose-900/10 border-rose-400 dark:bg-black/20 dark:border-rose-400" 
+                : "bg-black/5 border-rose-500 dark:bg-white/10 dark:border-rose-500"
           )}
         >
-          <Reply size={10} />
-          <span className="truncate max-w-[150px]">
-             {parentMessage.type === 'image' ? 'Image' : parentMessage.type === 'file' ? 'File' : parentMessage.content}
+          <span className={cn(
+              "text-[10px] font-bold mb-0.5", 
+              isMe ? "text-rose-600 dark:text-rose-300" : "text-rose-600 dark:text-rose-300"
+          )}>
+            {parentMessage.senderId === message.senderId ? "You" : "Peer"}
           </span>
+          <div className="flex items-center gap-1 opacity-70">
+             {parentMessage.type !== 'text' && <span className="text-[10px]">{parentMessage.type === 'image' ? '📷' : '📎'}</span>}
+             <span className="text-xs truncate max-w-[200px] text-slate-700 dark:text-slate-300 line-clamp-1">
+                {parentMessage.type === 'image' ? 'Image' : parentMessage.type === 'file' ? 'File' : parentMessage.content}
+             </span>
+          </div>
         </div>
       )}
 
@@ -121,7 +133,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMe, onR
               onClick={() => onReact(message.id, emoji)}
               className={cn(
                 "text-xs px-1.5 py-0.5 rounded-full border flex items-center gap-1 transition-all",
-                users.includes('me') // This assumes local user check happens upstream or logic adapted
+                users.includes('me') || users.includes(message.senderId)
                   ? "bg-rose-100 border-rose-200 text-rose-700 dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-300" 
                   : "bg-white border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
               )}
